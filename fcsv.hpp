@@ -104,24 +104,6 @@ auto split(const std::string& s) -> Row<N>
     return res;
 }
 
-template <typename... Ts>
-auto read(const std::string& s) -> Record<Ts...>
-{
-    return read<Ts...>(split<sizeof...(Ts)>(s));
-}
-
-template <typename... Ts>
-auto read(std::istream& s) -> std::vector<Record<Ts...>>
-{
-    std::vector<Record<Ts...>> res;
-
-    std::string line;
-    while (std::getline(s, line))
-        res.push_back(read<Ts...>(line));
-
-    return res;
-}
-
 template <typename... Ts, std::size_t... Is>
 auto to_string(const Record<Ts...>& r, std::index_sequence<Is...>) -> std::string
 {
@@ -149,6 +131,7 @@ template <typename... Ts>
 auto read(std::istream& s) -> std::vector<Record<Ts...>>
 {
     std::vector<Record<Ts...>> res;
+    res.reserve(1000);
 
     std::string line;
     while (std::getline(s, line))
@@ -182,3 +165,58 @@ void write(const std::vector<Record<Ts...>>& records, std::ostream& os)
 }
 
 } // namespace fcsv
+
+namespace fcsv2::detail {
+
+
+} // namespace fcsv2::detail
+
+namespace fcsv2 {
+
+template <typename... Ts>
+struct Reader
+{
+    using Record = std::tuple<Ts...>;
+
+    template <std::size_t N>
+    using Nth = std::tuple_element_t<N, std::tuple<Ts...>>;
+
+    Reader(std::istream& s) : m_stream{s} {}
+
+    void split()
+    {
+        std::string line;
+        std::getline(m_stream, line);
+
+        std::istringstream s{std::move(line)};
+
+        for (unsigned i = 0; i < m_split.size(); ++i)
+            std::getline(s, m_split[i], ',');
+    }
+
+    auto next() -> std::tuple<Ts...>
+    {
+        split();
+        return parse(std::index_sequence_for<Ts...>{});
+    }
+
+    template <typename T>
+    void assign(T& t, const T& val)
+    {
+        t = val;
+    }
+
+    template <std::size_t... Is>
+    auto parse(std::index_sequence<Is...>) -> Record
+    {
+        Record res;
+        (assign(std::get<Is>(res), fcsv::detail::to<Nth<Is>>(m_split.at(Is))), ...);
+
+        return res;
+    }
+
+    std::istream& m_stream;
+    std::array<std::string, sizeof...(Ts)> m_split;
+};
+
+} // namespace fcsv2

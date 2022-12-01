@@ -3,19 +3,61 @@
 #include <fstream>
 #include <iostream>
 
+#include <chrono>
+
+using namespace std::chrono_literals;
+
+
 auto main() -> int
 {
     std::ifstream file{"test.csv"};
 
-    const auto records = fcsv::read<std::string, unsigned, int, float, double>(file);
+    fcsv2::Reader<int, int, int, int, int> reader{file};
 
-    for (const auto& r : records)
-        std::cout << fcsv::to_string(r) << std::endl;
+    const auto start = std::chrono::high_resolution_clock::now();
 
-    std::cout << std::get<0>(records.at(0)) << std::endl;
 
-    fcsv::write(records, std::cout);
-    fcsv::write(records.at(1), std::cout);
+    for (auto i = 0; i < 1000000; ++i)
+    {
+        auto t = reader.next();
+        (void) t;
+    }
+
+    const auto stop = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    std::cout << duration.count() << "us" << std::endl;
 
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
+    const auto start = std::chrono::high_resolution_clock::now();
+    const auto records = fcsv::read<std::string, std::string, std::string, std::string>(file);
+    const auto stop = std::chrono::high_resolution_clock::now();
+
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    std::cout << duration.count() << "us" << std::endl;
+
+
+
+*/
